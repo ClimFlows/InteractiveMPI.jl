@@ -1,7 +1,7 @@
 name = "InteractiveMPI"
 uuid = "babe802c-1c1b-4c4c-8440-d6d8c005748b"
 authors = ["Thomas Dubos <thomas.dubos@polytechnique.edu> and contributors"]
-version = "1.0.0-DEV"
+version = "0.1.0"
 
 [compat]
 julia = "1.6.7"
