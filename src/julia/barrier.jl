@@ -1,19 +1,28 @@
-struct Barrier
-    count::Int
-    arrived::Threads.Atomic{Int}
-    release::Channel{Nothing}
-end
+# borrowed from OhMyThreads.jl SimpleBarrier
 
-function Barrier(n::Int)
-    Barrier(n, Threads.Atomic{Int}(0), Channel{Nothing}(n))
-end
+mutable struct Barrier
+    const n::Int64
+    const c::Threads.Condition
+    cnt::Int64
 
-function wait_at_barrier(b::Barrier)
-    if Threads.atomic_add!(b.arrived, 1) == b.count-1 
-        for _ in 1:b.count
-            put!(b.release, nothing)
-        end
-        b.arrived[] = 0
+    function Barrier(n::Integer)
+        new(n, Threads.Condition(), 0)
     end
-    take!(b.release)
+end
+
+Base.wait(b::Barrier) = wait(()->nothing, b)
+function Base.wait(op, b::Barrier)
+    lock(b.c)
+    try
+        b.cnt += 1
+        if b.cnt == b.n # last arrived
+            b.cnt = 0
+            op() #user-defined cleanup operation performed once
+            notify(b.c)
+        else
+            wait(b.c)
+        end
+    finally
+        unlock(b.c)
+    end
 end
