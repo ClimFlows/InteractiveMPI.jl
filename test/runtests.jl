@@ -2,6 +2,10 @@ using InteractiveMPI
 using Test
 using Base.Threads
 
+using NetCDF: ncread
+using ClimFlowsData: DYNAMICO_reader, DYNAMICO_meshfile
+using CFDomains: VoronoiSphere
+
 #=
 function start_test_barrier(nt)
     @sync begin
@@ -25,6 +29,17 @@ end
         for i in 1:4
             println("Hello world $i, I am rank $(MPI.Comm_rank(comm)) of $(MPI.Comm_size(comm))")
             MPI.Barrier(comm)
+        end
+    end
+end
+
+@testset "Critical" begin
+    InteractiveMPI.start(2) do MPI
+        MPI.Init()
+        comm = MPI.COMM_WORLD
+        sphere = MPI.Critical() do 
+            meshfile = DYNAMICO_meshfile("uni.1deg.mesh.nc")
+            VoronoiSphere(DYNAMICO_reader(ncread, meshfile) ; prec=Float32)
         end
     end
 end

@@ -44,7 +44,7 @@ function Base.getproperty(MPI::ThreadsMPI, prop::Symbol)
     if hasfield(ThreadsMPI, prop)
         return getfield(MPI, prop)
     else
-        meths = (; Init, Comm_size, Comm_rank, Barrier, Irecv!, Isend, Waitall)
+        meths = (; Init, Comm_size, Comm_rank, Barrier, Irecv!, Isend, Waitall, Critical)
         return MPI_Method(MPI, getproperty(meths, prop))
     end
 end
@@ -99,6 +99,14 @@ function Waitall(mpi::ThreadsMPI, reqs::Vector{<:Request})
     end
 
     return nothing
+end
+
+function Critical(MPI::ThreadsMPI, todo::F) where F
+    channel = MPI.COMM_WORLD.pool.channel
+    put!(channel, nothing)
+    result = todo()
+    take!(channel)
+    return result
 end
 
 end # module
