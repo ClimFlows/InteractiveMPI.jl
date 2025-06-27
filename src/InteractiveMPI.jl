@@ -4,14 +4,17 @@ using Base.Threads: Threads, nthreads, @threads
 
 include("julia/barrier.jl")
 
+const Channels{T} = Vector{Channel{T}}
+channels(T, n) = [Channel{T}(1) for _ in 1:n]
+
 struct ThreadsPool
     size::Int
     barrier::Barrier
     channel::Channel{Nothing}
-    data::Channel{Any}
+    data::Channels{Any}
     sends::Vector{Any} # shared pool of send requests
 end
-ThreadsPool(n) = ThreadsPool(n, Barrier(n), Channel{Nothing}(1), Channel{Any}(n), Any[])
+ThreadsPool(n) = ThreadsPool(n, Barrier(n), Channel{Nothing}(1), channels(Any,n), Any[])
 
 struct ThreadsCommunicator
     pool::ThreadsPool

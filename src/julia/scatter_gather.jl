@@ -2,40 +2,27 @@ UBuffer(::ThreadsMPI, args...) = TUBuffer(args...)
 
 VBuffer(::ThreadsMPI, args...) = TVBuffer(args...)
 
-function Scatter(MPI::ThreadsMPI, buf::TUBuffer, ::Type{T}, origin, comm) where T
-    @info "Scatter" origin comm.rank
-    pool = comm.pool
-    if comm.rank == origin
+function Scatter(MPI::ThreadsMPI, buf::TUBuffer, ::Type{T}, sender, comm) where T
+    @info "Scatter" sender comm.rank
+    (; pool, rank) = comm
+    if rank == sender
         for i in 1:pool.size # share data
-            put!(pool.data, (buf.data, buf.count))
+            start, stop = (i-1)*buf.count, i*buf.count-1
+            put!(pool.data[i], @view buf.data[begin+start:begin+stop])
         end
     end
-    (data, count) = take!(pool.data)
-    return TScatter(data, comm.rank, count, T)
+    return T(take!(pool.data[rank+1]))    
 end
 
-function TScatter(data::AbstractArray, rank, count, ::Type{T}) where T
-    start, stop = rank*count, (rank+1)*count-1
-    result = T(data[(begin+start):(begin+stop)])
-    @info "TScatter" data rank count result
-    return result
-end
-
-function Scatterv!(MPI::ThreadsMPI, buf::TVBuffer, output, origin, comm)
-    @info "Scatterv!" buf origin comm.rank
-    pool = comm.pool
-    if comm.rank == origin
+function Scatterv!(MPI::ThreadsMPI, buf::TVBuffer, output, sender, comm)
+    @info "Scatterv!" buf sender comm.rank
+    (; pool, rank) = comm
+    if rank == sender
+        (; counts, displs) = buf
         for i in 1:pool.size # share data
-            put!(pool.data, (buf.data, buf.counts, buf.displs))
+            start, stop = displs[i], displs[i]+counts[i]-1
+            put!(pool.data[i], @view buf.data[begin+start:begin+stop])
         end
     end
-    (data, counts, displs) = take!(pool.data)
-    return TScatterv!(data, output, comm.rank, counts, displs)
-end
-
-function TScatterv!(data::AbstractArray, output::AbstractArray, rank, counts, displs)
-    start, stop = displs[rank+1], displs[rank+1]+counts[rank+1]-1
-    @info "TScatterv!" rank start stop length(data) length(output)
-    copyto!(output, @view data[(begin+start):(begin+stop)])
-    return output
+    return copyto!(output, take!(pool.data[rank+1]))
 end
