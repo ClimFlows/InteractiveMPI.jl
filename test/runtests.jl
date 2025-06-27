@@ -6,21 +6,7 @@ using NetCDF: ncread
 using ClimFlowsData: DYNAMICO_reader, DYNAMICO_meshfile
 using CFDomains: VoronoiSphere
 
-#=
-function start_test_barrier(nt)
-    @sync begin
-        b = InteractiveMPI.Barrier(nt)
-        for rank = 1:nt
-            @spawn     for i in 1:4
-                println("Task $rank at step $i")
-                wait(b)
-            end
-        end
-    end
-end
-
-@testset "Barrier" start_test_barrier(40)
-=#
+include("scatter.jl")
 
 @testset "01-hello.jl" begin
     InteractiveMPI.start(40) do MPI
@@ -73,3 +59,8 @@ end
         MPI.Barrier(comm)
     end
 end
+
+@testset "06-scatterv.jl" begin
+    InteractiveMPI.start(test_scatter, 3)
+end
+
