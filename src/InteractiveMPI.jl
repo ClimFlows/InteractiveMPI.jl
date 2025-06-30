@@ -50,7 +50,7 @@ function Base.getproperty(MPI::ThreadsMPI, prop::Symbol)
         meths = (; Critical, # needed for the threads-based implementation
                     Init, Comm_size, Comm_rank, Barrier, 
                     Irecv!, Isend, Waitall, # in point-to-point.jl
-                     UBuffer, VBuffer, Scatter, Scatterv!) # in scatter_gather.jl
+                     UBuffer, VBuffer, Scatter, Scatterv!, Gatherv!) # in scatter_gather.jl
         return MPI_Method(MPI, getproperty(meths, prop))
     end
 end

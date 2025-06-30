@@ -25,7 +25,7 @@ function test_scatter(MPI)
     if rank == MPI_root
         M, N = 4, 7
 
-        test = Float64[i for i in 1:M, j in 1:N]
+        test = Float64[i+j for i in 1:M, j in 1:N]
         output = similar(test)
 
         # Julia arrays are stored in column-major order, so we need to split along the last dimension
@@ -68,12 +68,12 @@ function test_scatter(MPI)
         MPI.Barrier(comm)
     end
 
-#    MPI.Gatherv!(local_test, output_vbuf, MPI_root, comm)
+    MPI.Gatherv!(local_test, output_vbuf, MPI_root, comm)
 
     if rank == MPI_root
-    #    println()
-    #    println("Final matrix")
-    #    println("================")
-    #    @show output
+        println()
+        println("Final matrix")
+        println("================")
+        @show output
     end
 end
