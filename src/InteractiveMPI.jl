@@ -1,17 +1,20 @@
 module InteractiveMPI
 
-using Base.Threads: Threads, nthreads, @threads, SpinLock as Lock
+using Base.Threads: Threads, nthreads, @threads
 
 include("julia/barrier.jl")
+
+const Channels{T} = Vector{Channel{T}}
+channels(T, n) = [Channel{T}(1) for _ in 1:n]
 
 struct ThreadsPool
     size::Int
     barrier::Barrier
-    lock::Lock
     channel::Channel{Nothing}
+    data::Channels{Any}
     sends::Vector{Any} # shared pool of send requests
 end
-ThreadsPool(n) = ThreadsPool(n, Barrier(n), Lock(), Channel{Nothing}(1), Any[])
+ThreadsPool(n) = ThreadsPool(n, Barrier(n), Channel{Nothing}(1), channels(Any,n), Any[])
 
 struct ThreadsCommunicator
     pool::ThreadsPool
@@ -33,7 +36,7 @@ function start(main, nt)
     pool = ThreadsPool(nt)
     tasks = Task[]
     for rank in 1:nt
-        MPI = ThreadsMPI(pool, rank)
+        MPI = ThreadsMPI(pool, rank-1)
         push!(tasks, Threads.@spawn main(MPI))
     end
     foreach(wait, tasks)
@@ -44,69 +47,31 @@ function Base.getproperty(MPI::ThreadsMPI, prop::Symbol)
     if hasfield(ThreadsMPI, prop)
         return getfield(MPI, prop)
     else
-        meths = (; Init, Comm_size, Comm_rank, Barrier, Irecv!, Isend, Waitall, Critical)
+        meths = (; Critical, # needed for the threads-based implementation
+                    Init, Comm_size, Comm_rank, Barrier, 
+                    Irecv!, Isend, Waitall, # in point-to-point.jl
+                     UBuffer, VBuffer, Scatter, Scatterv!, Gatherv!) # in scatter_gather.jl
         return MPI_Method(MPI, getproperty(meths, prop))
     end
 end
 
-Init(_) = nothing
-
-Comm_size(::ThreadsMPI, comm::ThreadsCommunicator) = comm.pool.size
-Comm_rank(::ThreadsMPI, comm::ThreadsCommunicator) = comm.rank - 1
-
-Barrier(::ThreadsMPI, comm::ThreadsCommunicator) = wait(comm.pool.barrier)
-
-struct Request{Msg}
-    is_recv::Bool
-    comm::ThreadsCommunicator
-    source::Int
-    dest::Int
-    tag::Int
-    msg::Msg
-end
-
-function Irecv!(::ThreadsMPI, msg, comm::ThreadsCommunicator; source, tag)
-    return Request(true, comm, source, comm.rank - 1, tag, msg)
-end
-function Isend(::ThreadsMPI, msg, comm::ThreadsCommunicator; dest, tag)
-    return Request(false, comm, comm.rank - 1, dest, tag, msg)
-end
-
-function Waitall(mpi::ThreadsMPI, reqs::Vector{<:Request})
-    pool = mpi.COMM_WORLD.pool
-    # collect send requests into pool.sends
-    put!(pool.channel, nothing)
-    for req in reqs
-        if !req.is_recv
-            push!(pool.sends, req)
-        end
-    end
-    take!(pool.channel)
-    # copy data from relevant send requests
-    wait(pool.barrier)
-    for req in reqs
-        if req.is_recv
-            for source in pool.sends
-                if (req.source, req.dest) == (source.source, source.dest)
-                    copy!(req.msg, source.msg)
-                end
-            end
-        end
-    end
-    # cleanup after all threads have finished
-    wait(pool.barrier) do 
-        empty!(pool.sends)
-    end
-
-    return nothing
-end
-
-function Critical(MPI::ThreadsMPI, todo::F) where F
+function Critical(MPI::ThreadsMPI, todo::F) where {F}
     channel = MPI.COMM_WORLD.pool.channel
     put!(channel, nothing)
     result = todo()
     take!(channel)
     return result
 end
+
+Init(_) = nothing
+
+Comm_size(::ThreadsMPI, comm::ThreadsCommunicator) = comm.pool.size
+Comm_rank(::ThreadsMPI, comm::ThreadsCommunicator) = comm.rank
+
+Barrier(::ThreadsMPI, comm::ThreadsCommunicator) = wait(comm.pool.barrier)
+
+include("julia/point-to-point.jl")
+include("julia/buffers.jl")
+include("julia/scatter_gather.jl")
 
 end # module
