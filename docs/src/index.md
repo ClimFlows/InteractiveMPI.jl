@@ -4,7 +4,7 @@ CurrentModule = InteractiveMPI
 
 # InteractiveMPI
 
-Documentation for [InteractiveMPI](https://github.com/dubosipsl/InteractiveMPI.jl).
+Documentation for [InteractiveMPI](https://github.com/ClimFlows/InteractiveMPI.jl).
 
 ```@index
 ```

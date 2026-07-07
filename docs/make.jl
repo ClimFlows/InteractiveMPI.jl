@@ -8,7 +8,7 @@ makedocs(;
     authors="Thomas Dubos <thomas.dubos@polytechnique.edu> and contributors",
     sitename="InteractiveMPI.jl",
     format=Documenter.HTML(;
-        canonical="https://dubosipsl.github.io/InteractiveMPI.jl",
+        canonical="https://ClimFlows.github.io/InteractiveMPI.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -18,6 +18,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/dubosipsl/InteractiveMPI.jl",
+    repo="github.com/ClimFlows/InteractiveMPI.jl",
     devbranch="main",
 )
