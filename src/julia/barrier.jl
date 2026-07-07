@@ -17,7 +17,7 @@ function Base.wait(op, b::Barrier)
         b.cnt += 1
         if b.cnt == b.n # last arrived
             b.cnt = 0
-            op() #user-defined cleanup operation performed once
+            op() # user-defined cleanup operation performed once
             notify(b.c)
         else
             wait(b.c)
