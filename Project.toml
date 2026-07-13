@@ -1,9 +1,16 @@
 name = "InteractiveMPI"
 uuid = "babe802c-1c1b-4c4c-8440-d6d8c005748b"
+version = "0.2.0"
 authors = ["Thomas Dubos <thomas.dubos@polytechnique.edu> and contributors"]
-version = "0.1.1"
+
+[weakdeps]
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+
+[extensions]
+MPIExt = ["MPI"]
 
 [compat]
+MPI = "0.20.26"
 julia = "1.8"
 
 [extras]

@@ -6,10 +6,12 @@ using NetCDF: ncread
 using ClimFlowsData: DYNAMICO_reader, DYNAMICO_meshfile
 using CFDomains: VoronoiSphere
 
+start(fun, n) = InteractiveMPI.start(fun, InteractiveMPI.ThreadsMPIBackend(n))
+
 include("scatter.jl")
 
 @testset "01-hello.jl" begin
-    InteractiveMPI.start(40) do MPI
+    start(40) do MPI
         MPI.Init()
         comm = MPI.COMM_WORLD
         for i in 1:4
@@ -20,7 +22,7 @@ include("scatter.jl")
 end
 
 @testset "Critical" begin
-    InteractiveMPI.start(2) do MPI
+    start(2) do MPI
         MPI.Init()
         comm = MPI.COMM_WORLD
         sphere = MPI.Critical() do 
@@ -31,7 +33,7 @@ end
 end
 
 @testset "04-sendrecv.jl" begin
-    InteractiveMPI.start(10) do MPI
+    start(10) do MPI
         MPI.Init()
         comm = MPI.COMM_WORLD
         rank = MPI.Comm_rank(comm)
@@ -61,6 +63,5 @@ end
 end
 
 @testset "06-scatterv.jl" begin
-    InteractiveMPI.start(test_scatter, 3)
+    start(test_scatter, 3)
 end
-
